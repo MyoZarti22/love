@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Surprise Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <style>
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
+    }
+    #terminal {
+      width: 100%;
+      height: 420px;
+      background-color: #000;
+      border: 1px solid #0f0;
+      box-sizing: border-box;
+    }
+    .controls {
+      margin-top: 12px;
+    }
+    button {
+      padding: 8px 14px;
+      font-family: monospace;
+      font-size: 14px;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+    button:hover {
+      background: #0f0;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>Special Message Terminal</h1>
+
+  <div class="controls">
+    <button id="startButton">Start Terminal (Auto-run)</button>
+    <button id="replayButton" style="display:none">Run Again</button>
+  </div>
+
+  <div id="terminal-container" style="display: none; margin-top:12px;">
+    <div id="terminal"></div>
+  </div>
+
+  <!-- 🎵 Hidden audio element for your MP3 -->
+  <audio id="loveSong" src="Love_Me_Like_There’s_No_Tomorrow.mp3"></audio>
+
+  <script>
+    // Helper: sleep using Promise
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    const startBtn = document.getElementById('startButton');
+    const replayBtn = document.getElementById('replayButton');
+    const termContainer = document.getElementById('terminal-container');
+    const loveSong = document.getElementById('loveSong'); // audio element
+
+    let term, inputBuffer = '', isWaitingForAnswer = false;
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.style.display = 'none';
+      termContainer.style.display = 'block';
+      replayBtn.style.display = 'inline-block';
+
+      if (!term) initTerminal();
+      await autoTypeCommand('love.bat', 80); // auto-type speed in ms per char
+    });
+
+    replayBtn.addEventListener('click', async () => {
+      // reset terminal view and re-run
+      term.clear();
+      inputBuffer = '';
+      isWaitingForAnswer = false;
+      term.writeln('Welcome to the special terminal!');
+      term.writeln('Type "love.bat" to begin, or "help" for help.');
+      await sleep(300);
+      await autoTypeCommand('love.bat', 60);
+
+      // Stop the music when replaying
+      loveSong.pause();
+      loveSong.currentTime = 0;
+    });
+
+    function initTerminal() {
+      term = new Terminal({
+        cursorBlink: true,
+        fontFamily: 'monospace',
+        fontSize: 14,
+        cols: 80,
+        rows: 22
+      });
+      term.open(document.getElementById('terminal'));
+
+      term.writeln('Welcome to the special terminal!');
+      term.writeln('Type "love.bat" to begin, or "help" for help.');
+
+      // input handling for y/n responses
+      term.onData(data => {
+        const ch = data;
+        // Backspace
+        if (ch.charCodeAt(0) === 127) {
+          if (inputBuffer.length > 0) {
+            term.write('\b \b');
+            inputBuffer = inputBuffer.slice(0, -1);
+          }
+        }
+        // Enter
+        else if (ch.charCodeAt(0) === 13) {
+          term.write('\r\n');
+          if (isWaitingForAnswer) {
+            handleAnswer(inputBuffer.trim().toLowerCase());
+            inputBuffer = '';
+          } else {
+            inputBuffer = '';
+          }
+        }
+        // regular chars (for y/n input only)
+        else {
+          if (isWaitingForAnswer) {
+            inputBuffer += ch;
+            term.write(ch);
+          }
+        }
+      });
+    }
+
+    // Auto-type a command into the terminal and then execute it
+    async function autoTypeCommand(cmd, speedMs=80) {
+      term.write('\r\n> ');
+      for (let i = 0; i < cmd.length; i++) {
+        term.write(cmd[i]);
+        await sleep(speedMs);
+      }
+      await sleep(200);
+      term.write('\r\n');
+      handleCommand(cmd);
+    }
+
+    function handleCommand(command) {
+      command = (command || '').trim().toLowerCase();
+      if (command === 'love.bat') {
+        isWaitingForAnswer = true;
+        term.writeln('--------------------------------------');
+        term.writeln('title Do you love me?');
+        term.writeln('Do you love me? (y/n)');
+        term.write('Your answer (y/n): ');
+      } else if (command === 'help') {
+        term.writeln('Available commands:');
+        term.writeln('  love.bat - Reveals a special message.');
+        term.write('\r\n> ');
+      } else {
+        term.writeln(`'${command}' is not recognized as an internal or external command.`);
+        term.writeln('Try typing "help" for a list of commands.');
+        term.write('\r\n> ');
+      }
+    }
+
+    function handleAnswer(answer) {
+      answer = (answer || '').trim().toLowerCase();
+      if (answer === 'y') {
+        term.writeln('');
+        term.writeln('--------------------------------------');
+        term.writeln('     /\\_/\\ ');
+        term.writeln('    ( o.o )');
+        term.writeln('      >🩷 <');
+        term.writeln('');
+        term.writeln('I love you too <3');
+        term.writeln('--------------------------------------');
+
+        // 🎵 Play MP3
+        loveSong.currentTime = 0; // restart if replay
+        loveSong.play();
+
+        isWaitingForAnswer = false;
+        term.writeln('\r\nOperation complete. Press Enter to return to the menu or click "Run Again".');
+      } else if (answer === 'n') {
+        term.writeln('');
+        term.writeln('--------------------------------------');
+        term.writeln('Why TwT');
+        term.writeln('    (\\ /)');
+        term.writeln('   ( ;-; )');
+        term.writeln('   c(")(")');
+        term.writeln('Hmm, I don’t like your answer though >w<');
+        term.writeln('--------------------------------------');
+        isWaitingForAnswer = false;
+        setTimeout(() => {
+          autoTypeCommand('love.bat', 60);
+        }, 1200);
+      } else {
+        term.write('\r\nInvalid input. Please enter "y" or "n": ');
+      }
+    }
+  </script>
+</body>
+</html>
